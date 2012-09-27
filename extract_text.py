@@ -6,7 +6,10 @@ import xml.etree.ElementTree as ET
 def get_text(root, tag):
     subtree = root.find(tag)
     for element in subtree:
-        yield element.text
+        if element.text:
+            yield element.text.replace('\n',' ')
+        else:
+            yield ""
 
 if __name__ == '__main__':
     import argparse
