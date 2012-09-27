@@ -23,9 +23,8 @@ if __name__ == '__main__':
 
     for s, t, f in zip(src, tgt, final):
         if args.type in ['all', 'src']:
-            print s
+            print s.encode('utf-8')
         if args.type in ['all', 'tgt']:
-            print t
+            print t.encode('utf-8')
         if args.type in ['all', 'final']:
-            print f
-
+            print f.encode('utf-8')
