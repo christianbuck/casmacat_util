@@ -71,7 +71,7 @@ if __name__ == '__main__':
                 if attribs.get('Text', None):
                     text = prep(attribs['Text'])
                     e.delete(pos, text)
-                text = prep(attribs['Value'])
+                text = prep(attribs.get('Value',''))
                 e.insert(pos, text)
             elif attribs['Type'] == 'delete':
                 assert attribs['Value'] in ['[Delete]', '[Back]']
