@@ -78,12 +78,15 @@ if __name__ == '__main__':
                 #if len(attribs['Text']) > 1 and attribs['Text'][0] == ' ':
                 #    pos += 1
                 #    attribs['Text'] = attribs['Text'][1:]
-                if len(attribs['Text']) > 1:
+                if len(attribs['Text']) == 2:
                     if attribs['Text'][0] == ' ':
                         pos += 1
                         attribs['Text'] = attribs['Text'][1:]
                     if attribs['Text'][-1] == ' ':
                         attribs['Text'] = attribs['Text'][:-1]
+                elif len(attribs['Text']) > 2 and attribs['Text'].startswith('  '):
+                    pos += 1
+                    attribs['Text'] = attribs['Text'][1:]
 
 
                 #text = ''.join(reversed(attribs['Text'].strip()))
@@ -105,9 +108,10 @@ if __name__ == '__main__':
             #print str(e).encode('utf-8')
 
     for segment_id in edited_segments:
+        print segment_id
         print edited_segments[segment_id]
-        print final_segments[segment_id]
-    #    #assert edited_segments[segment_id] == final_segments[segment_id]
+        print final_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')
+        assert edited_segments[segment_id] == final_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')
     #    assert edited_segments[segment_id].decode('latin-1') == final_segments[segment_id].decode('latin-1')
 
     #    print edited_segments[segment_id].decode('latin-1')
