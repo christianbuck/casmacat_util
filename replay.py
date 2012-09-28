@@ -37,8 +37,12 @@ def get_log(root):
 def get_segments(root, path):
     segments = {}
     for segment, segment_id in get_text(root, path):
-        segments[segment_id] = segment.encode('latin-1')
+        segments[segment_id] = prep(segment)
     return segments
+
+def prep(text):
+    #print text.encode('latin-1').replace('&','&amp;')
+    return text.encode('latin-1').replace('&','&amp;')
 
 if __name__ == '__main__':
     tree = ET.parse(sys.stdin)
@@ -46,17 +50,18 @@ if __name__ == '__main__':
 
     target_segments = get_segments(root, 'Project/Interface/Standard/Settings/TargetText')
     final_segments = get_segments(root, 'FinalText')
-    print target_segments
+    #print target_segments
 
     editors = {}
 
     edited_segments = {}
     for event_tag, attribs in get_log(root):
+        print attribs['Time']
         if event_tag == 'Key':
             segment_id = attribs['SegId']
 
             if not segment_id in editors:
-                editors[segment_id] = Editor(target_segments[segment_id])
+                editors[segment_id] = Editor(target_segments.get(segment_id,""))
             e = editors[segment_id]
 
             pos = int(attribs['Cursor'])
@@ -64,18 +69,26 @@ if __name__ == '__main__':
             assert attribs['Type'] in ['insert','delete']
             if attribs['Type'] == 'insert':
                 if attribs.get('Text', None):
-                    text = attribs['Text'].encode('latin-1')
+                    text = prep(attribs['Text'])
                     e.delete(pos, text)
-                text = attribs['Value'].encode('latin-1')
+                text = prep(attribs['Value'])
                 e.insert(pos, text)
             elif attribs['Type'] == 'delete':
                 assert attribs['Value'] in ['[Delete]', '[Back]']
-                if len(attribs['Text']) > 1 and attribs['Text'][0] == ' ':
-                    pos += 1
-                    attribs['Text'] = attribs['Text'][1:]
+                #if len(attribs['Text']) > 1 and attribs['Text'][0] == ' ':
+                #    pos += 1
+                #    attribs['Text'] = attribs['Text'][1:]
+                if len(attribs['Text']) > 1:
+                    if attribs['Text'][0] == ' ':
+                        pos += 1
+                        attribs['Text'] = attribs['Text'][1:]
+                    if attribs['Text'][-1] == ' ':
+                        attribs['Text'] = attribs['Text'][:-1]
+
+
                 #text = ''.join(reversed(attribs['Text'].strip()))
                 #text = unicode(attribs['Text'])
-                text = attribs['Text'].encode('latin-1')
+                text = prep(attribs['Text'])
                 if attribs['Value'] == '[Delete]' or '[Back]':
                     e.delete(pos, text)
                 else:
@@ -84,9 +97,20 @@ if __name__ == '__main__':
             #print repr(e.text)
             #print repr(str(e))
             #s = str(e)
-            edited_segments[segment_id] = str(e)
-            print str(e).decode('latin-1')
+            #edited_segments[segment_id] = str(e)
+            #print str(e).decode('latin-1')
+            s = str(e).decode('latin-1').encode('utf-8')
+            edited_segments[segment_id] = s
+            print str(e).decode('latin-1').encode('utf-8')
+            #print str(e).encode('utf-8')
 
     for segment_id in edited_segments:
-        assert edited_segments[segment_id] == final_segments[segment_id]
-        assert edited_segments[segment_id].decode('latin-1') == final_segments[segment_id].decode('latin-1')
+        print edited_segments[segment_id]
+        print final_segments[segment_id]
+    #    #assert edited_segments[segment_id] == final_segments[segment_id]
+    #    assert edited_segments[segment_id].decode('latin-1') == final_segments[segment_id].decode('latin-1')
+
+    #    print edited_segments[segment_id].decode('latin-1')
+    #    print final_segments[segment_id].decode('latin-1')
+    #    #assert edited_segments[segment_id] == final_segments[segment_id]
+    #    assert edited_segments[segment_id].decode('latin-1') == final_segments[segment_id].decode('latin-1')
