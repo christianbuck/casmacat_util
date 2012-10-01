@@ -2,7 +2,7 @@
 
 import sys
 import xml.etree.ElementTree as ET
-from editor import Editor
+from editor import Editor, EditException, SeriousEditException
 
 def get_text(root, tag):
     subtree = root.find(tag)
@@ -55,8 +55,10 @@ if __name__ == '__main__':
     editors = {}
 
     edited_segments = {}
+    error_ids = set()
     for event_tag, attribs in get_log(root):
         print attribs['Time']
+        print attribs
         if event_tag == 'Key':
             segment_id = attribs['SegId']
 
@@ -67,12 +69,22 @@ if __name__ == '__main__':
             pos = int(attribs['Cursor'])
 
             assert attribs['Type'] in ['insert','delete']
+            #if not 'Value' in attribs:
+            #    print '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$No Value, skipping'
+            #el
             if attribs['Type'] == 'insert':
-                if attribs.get('Text', None):
+                if attribs.get('Text', None):  # Text is selected
                     text = prep(attribs['Text'])
-                    e.delete(pos, text)
+                    if e.check_delete(pos, text):
+                        e.delete(pos, text)
+                    elif 'Value' in attribs:   # deleting nothing is ok, if we don't insert anything
+                        error_ids.add(segment_id)
+                    else:
+                        print 'UNDELETED:', text
                 text = prep(attribs.get('Value',''))
                 e.insert(pos, text)
+                #text = prep(attribs.get('Value',''))
+                #e.insert(pos, text)
             elif attribs['Type'] == 'delete':
                 assert attribs['Value'] in ['[Delete]', '[Back]']
                 #if len(attribs['Text']) > 1 and attribs['Text'][0] == ' ':
@@ -84,19 +96,26 @@ if __name__ == '__main__':
                         attribs['Text'] = attribs['Text'][1:]
                     if attribs['Text'][-1] == ' ':
                         attribs['Text'] = attribs['Text'][:-1]
-                elif len(attribs['Text']) > 2 and attribs['Text'].startswith('  '):
+                elif len(attribs['Text']) > 2 and attribs['Text'].startswith(' '): # was 2 spaces
+                    #print 'dont delete!'
                     pos += 1
                     attribs['Text'] = attribs['Text'][1:]
-
 
                 #text = ''.join(reversed(attribs['Text'].strip()))
                 #text = unicode(attribs['Text'])
                 text = prep(attribs['Text'])
-                if attribs['Value'] == '[Delete]' or '[Back]':
-                    e.delete(pos, text)
-                else:
-                    e.backspace(pos, text)
-
+                try:
+                    #if attribs['Value'] == '[Delete]' or '[Back]':
+                    if e.check_delete(pos, text):
+                        e.delete(pos, text)
+                    elif e.check_backspace(pos, text):
+                        print 'TRYING BACKSPACE'
+                        e.backspace(pos, text)
+                    else:
+                        raise EditException('could not delete')
+                        raise SeriousEditException('could not delete')
+                except EditException:
+                    error_ids.add(segment_id)
             #print repr(e.text)
             #print repr(str(e))
             #s = str(e)
@@ -107,11 +126,19 @@ if __name__ == '__main__':
             print str(e).decode('latin-1').encode('utf-8')
             #print str(e).encode('utf-8')
 
+    print "Error in segments:", " ".join(error_ids)
     for segment_id in edited_segments:
         print segment_id
+        print target_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')
         print edited_segments[segment_id]
         print final_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')
-        assert edited_segments[segment_id] == final_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')
+        if not (segment_id in error_ids or edited_segments[segment_id] == final_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')):
+            print "ERROR, final and edited don't match"
+            error_ids.add(segment_id)
+        assert segment_id in error_ids or edited_segments[segment_id] == final_segments[segment_id].decode('latin-1').replace('&amp;','&').encode('utf-8')
+
+    print "Error in segments:", " ".join(error_ids)
+    print "found errors in %s of %s segments" %(len(error_ids), len(final_segments))
     #    assert edited_segments[segment_id].decode('latin-1') == final_segments[segment_id].decode('latin-1')
 
     #    print edited_segments[segment_id].decode('latin-1')
