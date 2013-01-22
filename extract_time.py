@@ -3,17 +3,21 @@
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from operator import itemgetter
 
 def get_event_times(root):
     first_elem = True
     last_segment_id = None
     oldtime = -1
-    for event in root.find('Events'):
 
+    timed_events = [(int(e.attrib['Time']),e) for e in root.find('Events') if 'Time' in e.attrib and e.attrib['Time']]
+    timed_events.sort(key=itemgetter(0))
+
+    for t, event in timed_events:
         # check if time is monotonically increasing
-        if 'Time' in event.attrib:
-            assert int(event.attrib['Time']) >= oldtime
-            oldtime = int(event.attrib['Time'])
+        assert 'Time' in event.attrib
+        assert t >= oldtime
+        oldtime = t
 
         if event.tag.startswith('Mouse'):
             continue
@@ -25,7 +29,7 @@ def get_event_times(root):
                 first_elem = False
 
             last_segment_id = event.attrib['SegId']
-            yield event.attrib['SegId'], int(event.attrib['Time'])
+            yield event.attrib['SegId'], t
 
         elif event.tag == 'Interface':
             # Interface event: change sentences
@@ -46,13 +50,16 @@ def get_event_times(root):
                 continue
 
             assert last_segment_id == event.attrib['OldSegId']
-            yield event.attrib['OldSegId'], int(event.attrib['Time'])
-            yield event.attrib['NewSegId'], int(event.attrib['Time'])
+            yield event.attrib['OldSegId'], t
+            yield event.attrib['NewSegId'], t
             last_segment_id = event.attrib['NewSegId']
         elif event.tag == 'System' and 'Value' in event.attrib and event.attrib['Value'] == 'STOP':
             # End of Session
             # <System Time="3658000" Value="STOP"/>
-            yield -1, int(event.attrib['Time'])
+            pass
+
+    yield -1, oldtime
+            #   return
 
 
 def print_times_event(root, min_duration=2000):
@@ -79,5 +86,14 @@ def print_times_event(root, min_duration=2000):
 if __name__ == '__main__':
     tree = ET.parse(sys.stdin)
     root = tree.getroot()
+    #
+    #for e in root.find('Events'):
+    #    if 'Time' in e.attrib:
+    #        try:
+    #            float(e.attrib['Time'])
+    #        except:
+    #            print e, e.attrib
+    #
+    #sys.exit(0)
 
     print_times_event(root)
