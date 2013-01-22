@@ -55,11 +55,11 @@ def get_event_times(root):
             last_segment_id = event.attrib['NewSegId']
         elif event.tag == 'System' and 'Value' in event.attrib and event.attrib['Value'] == 'STOP':
             # End of Session
+            # maybe repeated, thus ignored
             # <System Time="3658000" Value="STOP"/>
             pass
 
     yield -1, oldtime
-            #   return
 
 
 def print_times_event(root, min_duration=2000):
@@ -86,14 +86,5 @@ def print_times_event(root, min_duration=2000):
 if __name__ == '__main__':
     tree = ET.parse(sys.stdin)
     root = tree.getroot()
-    #
-    #for e in root.find('Events'):
-    #    if 'Time' in e.attrib:
-    #        try:
-    #            float(e.attrib['Time'])
-    #        except:
-    #            print e, e.attrib
-    #
-    #sys.exit(0)
 
     print_times_event(root)
